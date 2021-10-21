@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Quick Discharge</string>
+
+    <string name="battery_power">"Battery power = %d/100"</string>
+    <string name="technology">"Technology: %s"</string>
+    <string name="temperature">"Temperature: %1d℃/%2d℉</string>
+    <string name="status">"Status: %s"</string>
+    <string name="plugged">"Plugged: %s"</string>
+    <string name="health">"Health: %s"</string>
+    <string name="voltage">"Voltage: %dmV"</string>
+    <string name="goals_battery">"Goals battery = %s"</string>
+    <string name="high_cpu_load">High CPU load</string>
+    <string name="camera_light">Camera light</string>
+    <string name="high_brightness_display">High brightness display</string>
+    <string name="gps_receivers">GPS receivers</string>
+    <string name="operated_vibrator">Operated vibrator</string>
+    <string name="network_connection">Network connection</string>
+    <string name="discharging">Discharging</string>
+    <string name="measurement_time">During the remaining time measurement</string>
+
+    <string name="unknow">Unknown</string>
+
+</resources>
