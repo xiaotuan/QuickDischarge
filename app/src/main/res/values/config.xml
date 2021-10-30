@@ -1,3 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <integer name="gps_location_time_interval">5000</integer>
+    <integer name="gps_distance">10</integer>
+    <integer-array name="vibrator_pattern">
+        <item>0</item>
+        <item>1000</item>
+        <item>0</item>
+        <item>1000</item>
+    </integer-array>
+    <string name="network_connection_url">http://www.baidu.com</string>
+    <integer name="network_request_interval">5000</integer>
+    <integer name="cpu_load_interval">10</integer>
 </resources>

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Quick Discharge</string>
+    <string name="app_name">Quick Discharge Ver 1.0</string>
 
     <string name="battery_power">"Battery power = %d/100"</string>
     <string name="technology">"Technology: %s"</string>
@@ -17,7 +17,24 @@
     <string name="network_connection">Network connection</string>
     <string name="discharging">Discharging</string>
     <string name="measurement_time">During the remaining time measurement</string>
-
+    <string name="battery_status_charging">Charging</string>
+    <string name="battery_status_discharging">Discharging</string>
+    <string name="battery_status_full">Full</string>
+    <string name="battery_status_not_charging">Not charging</string>
+    <string name="battery_plugged_ac">AC</string>
+    <string name="battery_plugged_usb">USB</string>
+    <string name="battery_plugged_wireless">Wireless</string>
+    <string name="battery_health_cold">Cold</string>
+    <string name="battery_health_dead">Dead</string>
+    <string name="battery_health_good">Good</string>
+    <string name="battery_health_over_heat">Over heat</string>
+    <string name="battery_health_over_voltage">Over voltage</string>
+    <string name="battery_health_unspecified_failure">Unspecified failure</string>
+    <string name="exit_tip">The device is discharging, are you sure you need to exit the application?</string>
+    <string name="grant_location_permission_tip">Please grant targeting permission first</string>
+    <string name="turn_on_gps_tip">Please turn on positioning first</string>
+    <string name="sure">Sure</string>
+    <string name="cancel">Cancel</string>
     <string name="unknow">Unknown</string>
 
 </resources>

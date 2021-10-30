@@ -1,20 +1,17 @@
 package com.qty.quickdischarge
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.hardware.Camera
 import android.os.BatteryManager
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.PowerManager
 import android.util.Log
-import android.view.SurfaceHolder
-import android.view.SurfaceView
-import android.view.View
+import android.view.*
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
@@ -24,6 +21,7 @@ import kotlin.math.round
 class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, View.OnClickListener,
     CompoundButton.OnCheckedChangeListener, SurfaceHolder.Callback {
 
+    private lateinit var mTitleTv: TextView
     private lateinit var mSurfaceView: SurfaceView
     private lateinit var mContainer: View
     private lateinit var mBatteryPowerTv: TextView
@@ -52,7 +50,6 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
     private lateinit var mOperatedVibrator: OperatedVibrator
     private lateinit var mNetworkConnection: NetworkConnection
     private var mHolder: SurfaceHolder? = null
-    private lateinit var mLock: PowerManager.WakeLock
 
     private var mBatteryLevel = -1
     private var mTechnology = ""
@@ -62,11 +59,15 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
     private var mHealth = BatteryManager.BATTERY_HEALTH_UNKNOWN
     private var mVoltage = 0
 
-    @SuppressLint("InvalidWakeLockTag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = Color.BLACK
+        }
+
+        mTitleTv = findViewById(R.id.app_name)
         mSurfaceView = findViewById(R.id.surface_view)
         mContainer = findViewById(R.id.container)
         mBatteryPowerTv = findViewById(R.id.battery_power)
@@ -86,14 +87,12 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         mNetworkConnectionCb = findViewById(R.id.network_connection)
         mDischargingTb = findViewById(R.id.discharging)
 
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        mLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "DisCharge app request")
-        mHighCpuLoad = HighCpuLoad()
+        mHighCpuLoad = HighCpuLoad(this)
         mCameraLight = CameraLight()
         mHighBrightnessDisplay = HighBrightnessDisplay(this)
         mGpsReceiver = GpsReceiver(this)
         mOperatedVibrator = OperatedVibrator(this)
-        mNetworkConnection = NetworkConnection()
+        mNetworkConnection = NetworkConnection(this)
         mBatteryChangeReceiver = BatteryChangedReceiver(this)
         registerReceiver(mBatteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
@@ -138,8 +137,28 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         super.onDestroy()
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (mDischargingTb.isChecked) {
+                AlertDialog.Builder(this)
+                    .setMessage(R.string.exit_tip)
+                    .setPositiveButton(R.string.sure) { _, _ ->
+                        finish()
+                    }
+                    .setNegativeButton(R.string.cancel) { _, _ -> }
+                    .create()
+                    .show()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-        mGoalsBatteryTv.text = getString(R.string.goals_battery, "$progress%")
+        if (progress > mBatteryLevel - 1) {
+            mBatteryLevelSb.progress = mBatteryLevel - 1
+        }
+        mGoalsBatteryTv.text = getString(R.string.goals_battery, "${mBatteryLevelSb.progress}%")
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar?) {
@@ -224,10 +243,18 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
     }
 
     private fun updateDischargingStatus() {
-        if (mDischargingTb.isChecked) {
-            mContainer.setBackgroundColor(resources.getColor(android.R.color.background_light))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (mDischargingTb.isChecked) {
+                mContainer.setBackgroundColor(getColor(android.R.color.background_light))
+            } else {
+                mContainer.setBackgroundColor(getColor(android.R.color.background_dark))
+            }
         } else {
-            mContainer.setBackgroundColor(resources.getColor(android.R.color.background_dark))
+            if (mDischargingTb.isChecked) {
+                mContainer.setBackgroundColor(resources.getColor(android.R.color.background_light))
+            } else {
+                mContainer.setBackgroundColor(resources.getColor(android.R.color.background_dark))
+            }
         }
         setViewEnabled(!mDischargingTb.isChecked)
     }
@@ -242,7 +269,7 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         mNetworkConnectionCb.isEnabled = enabled
     }
 
-    fun updateBatteryInfo() {
+    private fun updateBatteryInfo() {
         mBatteryPowerTv.text = getString(R.string.battery_power, mBatteryLevel)
         mTechnologyTv.text = getString(R.string.technology, mTechnology)
         mTemperatureTv.text = getString(R.string.temperature, mTemperature / 10, (mTemperature / 10 * 1.8 + 32).toInt())
@@ -250,16 +277,20 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         mPluggedTv.text = getString(R.string.plugged, getPluggedDescription())
         mHealthTv.text = getString(R.string.health, getHealthDescription())
         mVoltageTv.text = getString(R.string.voltage, mVoltage)
-        if (mBatteryLevel <= 25) {
-            mBatteryPowerTv.setTextColor(Color.RED)
-        } else if (mBatteryLevel <= 50) {
-            mBatteryPowerTv.setTextColor(Color.YELLOW)
-        } else {
-            mBatteryPowerTv.setTextColor(Color.GREEN)
+        when {
+            mBatteryLevel <= 25 -> {
+                mBatteryPowerTv.setTextColor(Color.RED)
+            }
+            mBatteryLevel <= 50 -> {
+                mBatteryPowerTv.setTextColor(Color.YELLOW)
+            }
+            else -> {
+                mBatteryPowerTv.setTextColor(Color.GREEN)
+            }
         }
     }
 
-    fun updateCheckboxStatus() {
+    private fun updateCheckboxStatus() {
         mHighCpuLoadCb.isChecked = mSharedPreferences.getBoolean(Constant.HIGH_CPU_LOAD_KEY, false)
         mCameraLightCb.isChecked = mSharedPreferences.getBoolean(Constant.CAMERA_LIGHT_KEY, false)
         mHighBrightnessDisplayCb.isChecked = mSharedPreferences.getBoolean(Constant.HIGH_BRIGHTNESS_DISPLAY_KEY, false)
@@ -268,7 +299,7 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         mNetworkConnectionCb.isChecked = mSharedPreferences.getBoolean(Constant.NETWORK_CONNECTION_KEY, false)
     }
 
-    fun updateDischargingButtonStatus() {
+    private fun updateDischargingButtonStatus() {
         val highCpuLoad = mSharedPreferences.getBoolean(Constant.HIGH_CPU_LOAD_KEY, false)
         val cameraLight = mSharedPreferences.getBoolean(Constant.CAMERA_LIGHT_KEY, false)
         val highBrightnessDisplay = mSharedPreferences.getBoolean(Constant.HIGH_BRIGHTNESS_DISPLAY_KEY, false)
@@ -288,45 +319,48 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
                 return true
             }
         }
+
         return false
     }
 
     private fun getStatusDescription(): String {
         return when (mStatus) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
-            BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
-            BatteryManager.BATTERY_STATUS_FULL -> "Full"
-            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Not charging"
+            BatteryManager.BATTERY_STATUS_CHARGING -> getString(R.string.battery_status_charging)
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> getString(R.string.battery_status_discharging)
+            BatteryManager.BATTERY_STATUS_FULL -> getString(R.string.battery_status_full)
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> getString(R.string.battery_status_not_charging)
             else -> getString(R.string.unknow)
         }
     }
 
     private fun getPluggedDescription(): String {
         return when (mPlugged) {
-            BatteryManager.BATTERY_PLUGGED_AC -> "AC"
-            BatteryManager.BATTERY_PLUGGED_USB -> "USB"
-            BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless"
+            BatteryManager.BATTERY_PLUGGED_AC -> getString(R.string.battery_plugged_ac)
+            BatteryManager.BATTERY_PLUGGED_USB -> getString(R.string.battery_plugged_usb)
+            BatteryManager.BATTERY_PLUGGED_WIRELESS -> getString(R.string.battery_plugged_wireless)
             else -> getString(R.string.unknow)
         }
     }
 
     private fun getHealthDescription(): String {
         return when (mHealth) {
-            BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
-            BatteryManager.BATTERY_HEALTH_DEAD -> "Dead"
-            BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
-            BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Over heat"
-            BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over voltage"
-            BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Unspecified failure"
+            BatteryManager.BATTERY_HEALTH_COLD -> getString(R.string.battery_health_cold)
+            BatteryManager.BATTERY_HEALTH_DEAD -> getString(R.string.battery_health_dead)
+            BatteryManager.BATTERY_HEALTH_GOOD -> getString(R.string.battery_health_good)
+            BatteryManager.BATTERY_HEALTH_OVERHEAT -> getString(R.string.battery_health_over_heat)
+            BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> getString(R.string.battery_health_over_voltage)
+            BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> getString(R.string.battery_health_unspecified_failure)
             else -> getString(R.string.unknow)
         }
     }
 
-    @SuppressLint("WakelockTimeout")
     private fun startDisCharge() {
-        if (!mLock.isHeld) {
-            mLock.acquire()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.setBackgroundDrawable(resources.getDrawable(R.drawable.window_background_discharge_color))
+            window.statusBarColor = resources.getColor(R.color.status_bar_bg)
         }
+        mTitleTv.setTextColor(Color.GRAY)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (mHighCpuLoadCb.isChecked) {
             mHighCpuLoad.start()
         }
@@ -348,9 +382,12 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
     }
 
     private fun stopDisCharge() {
-        if (mLock.isHeld) {
-            mLock.release()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.setBackgroundDrawable(resources.getDrawable(R.drawable.window_background_normal_color))
+            window.statusBarColor = Color.BLACK
         }
+        mTitleTv.setTextColor(Color.WHITE)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         mHighCpuLoad.stop()
         mCameraLight.stop()
         mHighBrightnessDisplay.stop()
@@ -366,14 +403,14 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
                 Log.d(TAG, "onReceive=>action: ${it.action}")
-                if (Intent.ACTION_BATTERY_CHANGED.equals(it.action)) {
+                if (Intent.ACTION_BATTERY_CHANGED == it.action) {
                     if (activity.mBatteryLevel == -1) {
                         activity.mBatteryLevel = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                         activity.mBatteryLevelSb.progress = round(activity.mBatteryLevel * 0.5).toInt()
                     } else {
                         activity.mBatteryLevel = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     }
-                    var technology = it.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)
+                    val technology = it.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY)
                     activity.mTechnology = technology ?: context!!.getString(R.string.unknow)
                     activity.mTemperature = it.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)
                     activity.mStatus = it.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
@@ -392,7 +429,6 @@ class QuickDischarge : AppCompatActivity(), SeekBar.OnSeekBarChangeListener, Vie
 
     companion object {
         const val TAG = "QuickDischarge"
-
         const val REQUET_CODE = 666
         val PERMISSIONS = arrayOf(Manifest.permission.INTERNET, Manifest.permission.VIBRATE, Manifest.permission.WAKE_LOCK,
             Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION,

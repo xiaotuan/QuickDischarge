@@ -3,15 +3,13 @@ package com.qty.quickdischarge
 import android.hardware.Camera
 import android.util.Log
 import android.view.SurfaceHolder
-import android.view.SurfaceView
-import java.lang.Exception
 
 class CameraLight {
 
     private var mCamera: Camera? = null
     private var isStarted = false
 
-    public fun start(holder: SurfaceHolder) {
+    fun start(holder: SurfaceHolder) {
         Log.d(TAG, "start=>isStarted: $isStarted")
         if (!isStarted) {
             isStarted = true
@@ -19,7 +17,7 @@ class CameraLight {
         }
     }
 
-    public fun stop() {
+    fun stop() {
         if (isStarted) {
             isStarted = false
             stopPreview()

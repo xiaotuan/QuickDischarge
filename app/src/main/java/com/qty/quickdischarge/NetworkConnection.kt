@@ -1,5 +1,6 @@
 package com.qty.quickdischarge
 
+import android.content.Context
 import android.util.Log
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -8,19 +9,21 @@ import java.lang.StringBuilder
 import java.net.HttpURLConnection
 import java.net.URL
 
-class NetworkConnection {
+class NetworkConnection(
+    private val context: Context
+) {
 
     private var mNetworkConnectionThread: Thread? = null
 
     private var isStarted = false
 
-    public fun start() {
+    fun start() {
         if (!isStarted) {
             isStarted = true
             mNetworkConnectionThread = Thread {
                 while (isStarted) {
                     try {
-                        val baidu = URL("https://www.baidu.com/")
+                        val baidu = URL(context.resources.getString(R.string.network_connection_url))
                         val connection = baidu.openConnection() as HttpURLConnection
                         connection.requestMethod = "GET"
                         connection.useCaches = false
@@ -39,7 +42,7 @@ class NetworkConnection {
                             Log.d(TAG, "start=>response: $sb")
                         }
                         connection.disconnect()
-                        Thread.sleep(100)
+                        Thread.sleep(context.resources.getInteger(R.integer.network_request_interval).toLong())
                     } catch (e: Exception) {
                         Log.e(TAG, "start=>error: $e")
                     }
@@ -49,11 +52,11 @@ class NetworkConnection {
         }
     }
 
-    public fun stop() {
+    fun stop() {
         if (isStarted) {
             isStarted = false
             try {
-                mNetworkConnectionThread!!.interrupt()
+                mNetworkConnectionThread?.interrupt()
             } catch (e: Exception) {
                 Log.e(TAG, "stop=> $e")
             }

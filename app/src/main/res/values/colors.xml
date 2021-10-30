@@ -7,4 +7,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="status_bar_bg">#55424242</color>
+    <color name="quick_discharge_disable_bg_color">@android:color/background_dark</color>
+    <color name="battery_power_normal_color">@android:color/holo_green_dark</color>
+    <color name="battery_power_warnning_color">#FFEB3B</color>
+    <color name="battery_power_danger_color">#E91E63</color>
+    <color name="battery_info_text_color">@android:color/darker_gray</color>
+    <color name="seekbar_bg_tint">@android:color/darker_gray</color>
+    <color name="discharge_level_text_color">@android:color/holo_red_dark</color>
+    <drawable name="action_bar_normal_bg">#FF6200EE</drawable>
+    <drawable name="action_bar_discharge_bg">#FFFFFF</drawable>
+    <drawable name="window_background_normal_color">#FF000000</drawable>
+    <drawable name="window_background_discharge_color">#FFFFFF</drawable>
+
 </resources>

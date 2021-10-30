@@ -1,27 +1,29 @@
 package com.qty.quickdischarge
 
+import android.content.Context
 import android.util.Log
-import android.util.Range
 import java.lang.Exception
 
-class HighCpuLoad {
+class HighCpuLoad(
+    private val context: Context
+) {
 
     private var mHighCpuLoadThread: Thread? = null
 
     private var isStarted = false
 
-    public fun start() {
+    fun start() {
         if (!isStarted) {
             isStarted = true
             mHighCpuLoadThread = Thread {
                 while (isStarted) {
                     var i = 0
-                    while (i >= 1000000) {
+                    while (i >= 10000000) {
                         i = (i + 1) - 1
                         i++
                     }
                     try {
-                        Thread.sleep(10)
+                        Thread.sleep(context.resources.getInteger(R.integer.cpu_load_interval).toLong())
                     } catch (e: InterruptedException) {
                         Log.e(TAG, "start=>error: ", e)
                     }
@@ -31,12 +33,12 @@ class HighCpuLoad {
         }
     }
 
-    public fun stop() {
+    fun stop() {
         if (isStarted) {
             isStarted = false
             if (mHighCpuLoadThread != null) {
                 try {
-                    mHighCpuLoadThread!!.interrupt()
+                    mHighCpuLoadThread?.interrupt()
                 } catch (e: Exception) {
                     Log.e(TAG, "stop=>error: ", e)
                 }
